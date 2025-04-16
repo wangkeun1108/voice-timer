@@ -60,6 +60,7 @@
     let countdown;
     let timeLeft = 0;
     let isPaused = false;
+    let alwaysListening = false;
 
     function updateDisplay() {
       let h = Math.floor(timeLeft / 3600);
@@ -115,6 +116,35 @@
       speak("초기화 완료");
     }
 
+    function initKeywordListening() {
+      const recognizer = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognizer.lang = 'ko-KR';
+      recognizer.continuous = true;
+      recognizer.interimResults = false;
+
+      recognizer.onresult = function(event) {
+        const transcript = event.results[event.results.length - 1][0].transcript;
+        if (transcript.includes("타이머")) {
+          speak("음성 명령을 시작합니다");
+          recognizer.stop();
+          startListening();
+        }
+      };
+
+      recognizer.onerror = function(event) {
+        console.error('음성 인식 오류:', event.error);
+        setTimeout(initKeywordListening, 2000); // 재시도
+      };
+
+      recognizer.onend = function() {
+        if (!alwaysListening) {
+          setTimeout(initKeywordListening, 2000);
+        }
+      };
+
+      recognizer.start();
+    }
+
     function startListening() {
       const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
       recognition.lang = 'ko-KR';
@@ -122,12 +152,6 @@
 
       recognition.onresult = function(event) {
         const transcript = event.results[0][0].transcript;
-
-        if (transcript.includes("운동")) {
-          speak("음성 명령을 시작합니다");
-          startListening();
-          return;
-        }
 
         if (transcript.includes("시작")) {
           startTimer();
@@ -151,10 +175,13 @@
             speak("'시작', '일시정지', '재시작', '초기화' 또는 시간 설정을 말해주세요");
           }
         }
+
+        setTimeout(initKeywordListening, 1000); // 다시 키워드 대기 시작
       };
 
       recognition.onerror = function(event) {
         alert('음성 인식 오류: ' + event.error);
+        initKeywordListening();
       };
     }
 
@@ -163,10 +190,9 @@
         .then(() => console.log("Service Worker Registered"));
     }
 
-    // 페이지 로드 시 자동으로 음성인식 시작
     window.onload = function() {
-      speak("타이머 준비 완료. '운동'이라고 말해보세요");
-      startListening();
+      speak("타이머 준비 완료. '타이머'라고 말해보세요");
+      initKeywordListening();
     }
   </script>
 </body>
