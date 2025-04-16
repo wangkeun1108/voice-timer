@@ -127,7 +127,7 @@
         if (transcript.includes("타이머")) {
           speak("음성 명령을 시작합니다");
           recognizer.stop();
-          startListening();
+          setTimeout(startListening, 500); // 안정성을 위한 딜레이
         }
       };
 
@@ -176,12 +176,14 @@
           }
         }
 
+        recognition.stop();
         setTimeout(initKeywordListening, 1000);
       };
 
       recognition.onerror = function(event) {
         console.error('음성 인식 오류:', event.error);
-        initKeywordListening();
+        recognition.stop();
+        setTimeout(initKeywordListening, 1000);
       };
 
       recognition.onend = function() {
