@@ -60,7 +60,8 @@
     let countdown;
     let timeLeft = 0;
     let isPaused = false;
-    let alwaysListening = false;
+    let isListening = false;
+    let keywordRecognizer;
 
     function updateDisplay() {
       let h = Math.floor(timeLeft / 3600);
@@ -117,41 +118,47 @@
     }
 
     function initKeywordListening() {
-      const recognizer = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-      recognizer.lang = 'ko-KR';
-      recognizer.continuous = true;
-      recognizer.interimResults = false;
+      if (keywordRecognizer) keywordRecognizer.abort();
 
-      recognizer.onresult = function(event) {
-        const transcript = event.results[event.results.length - 1][0].transcript;
+      keywordRecognizer = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      keywordRecognizer.lang = 'ko-KR';
+      keywordRecognizer.continuous = true;
+      keywordRecognizer.interimResults = false;
+
+      keywordRecognizer.onresult = function(event) {
+        const transcript = event.results[event.results.length - 1][0].transcript.trim();
         if (transcript.includes("타이머")) {
-          speak("음성 명령을 시작합니다");
-          recognizer.stop();
-          setTimeout(startListening, 500); // 안정성을 위한 딜레이
+          if (!isListening) {
+            isListening = true;
+            speak("음성 명령을 시작합니다");
+            keywordRecognizer.stop();
+            setTimeout(startListening, 500);
+          }
         }
       };
 
-      recognizer.onerror = function(event) {
-        console.error('음성 인식 오류:', event.error);
+      keywordRecognizer.onerror = function(event) {
+        console.error('키워드 음성 인식 오류:', event.error);
         setTimeout(initKeywordListening, 2000);
       };
 
-      recognizer.onend = function() {
-        if (!alwaysListening) {
+      keywordRecognizer.onend = function() {
+        if (!isListening) {
           setTimeout(initKeywordListening, 2000);
         }
       };
 
-      recognizer.start();
+      keywordRecognizer.start();
     }
 
     function startListening() {
       const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
       recognition.lang = 'ko-KR';
+      recognition.interimResults = false;
       recognition.start();
 
       recognition.onresult = function(event) {
-        const transcript = event.results[0][0].transcript;
+        const transcript = event.results[0][0].transcript.trim();
 
         if (transcript.includes("시작")) {
           startTimer();
@@ -177,16 +184,19 @@
         }
 
         recognition.stop();
+        isListening = false;
         setTimeout(initKeywordListening, 1000);
       };
 
       recognition.onerror = function(event) {
-        console.error('음성 인식 오류:', event.error);
+        console.error('명령 음성 인식 오류:', event.error);
         recognition.stop();
+        isListening = false;
         setTimeout(initKeywordListening, 1000);
       };
 
       recognition.onend = function() {
+        isListening = false;
         setTimeout(initKeywordListening, 1000);
       };
     }
