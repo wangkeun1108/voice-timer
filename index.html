@@ -61,7 +61,8 @@
     let timeLeft = 0;
     let isPaused = false;
     let isListening = false;
-    let keywordRecognizer;
+    let keywordRecognizer = null;
+    let commandRecognizer = null;
 
     function updateDisplay() {
       let h = Math.floor(timeLeft / 3600);
@@ -130,8 +131,8 @@
         if (transcript.includes("타이머")) {
           if (!isListening) {
             isListening = true;
-            speak("음성 명령을 시작합니다");
-            keywordRecognizer.stop();
+            speak("말씀해주세요");
+            keywordRecognizer.abort();
             setTimeout(startListening, 500);
           }
         }
@@ -144,7 +145,7 @@
 
       keywordRecognizer.onend = function() {
         if (!isListening) {
-          setTimeout(initKeywordListening, 2000);
+          setTimeout(initKeywordListening, 1000);
         }
       };
 
@@ -152,12 +153,14 @@
     }
 
     function startListening() {
-      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-      recognition.lang = 'ko-KR';
-      recognition.interimResults = false;
-      recognition.start();
+      if (commandRecognizer) commandRecognizer.abort();
 
-      recognition.onresult = function(event) {
+      commandRecognizer = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      commandRecognizer.lang = 'ko-KR';
+      commandRecognizer.interimResults = false;
+      commandRecognizer.start();
+
+      commandRecognizer.onresult = function(event) {
         const transcript = event.results[0][0].transcript.trim();
 
         if (transcript.includes("시작")) {
@@ -179,23 +182,20 @@
             updateDisplay();
             speak("시간 설정 완료");
           } else {
-            speak("'시작', '일시정지', '재시작', '초기화' 또는 시간 설정을 말해주세요");
+            speak("알 수 없는 명령입니다");
           }
         }
 
-        recognition.stop();
+        commandRecognizer.stop();
+      };
+
+      commandRecognizer.onend = function() {
         isListening = false;
         setTimeout(initKeywordListening, 1000);
       };
 
-      recognition.onerror = function(event) {
+      commandRecognizer.onerror = function(event) {
         console.error('명령 음성 인식 오류:', event.error);
-        recognition.stop();
-        isListening = false;
-        setTimeout(initKeywordListening, 1000);
-      };
-
-      recognition.onend = function() {
         isListening = false;
         setTimeout(initKeywordListening, 1000);
       };
