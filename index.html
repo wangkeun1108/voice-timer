@@ -133,7 +133,7 @@
 
       recognizer.onerror = function(event) {
         console.error('음성 인식 오류:', event.error);
-        setTimeout(initKeywordListening, 2000); // 재시도
+        setTimeout(initKeywordListening, 2000);
       };
 
       recognizer.onend = function() {
@@ -176,12 +176,16 @@
           }
         }
 
-        setTimeout(initKeywordListening, 1000); // 다시 키워드 대기 시작
+        setTimeout(initKeywordListening, 1000);
       };
 
       recognition.onerror = function(event) {
-        alert('음성 인식 오류: ' + event.error);
+        console.error('음성 인식 오류:', event.error);
         initKeywordListening();
+      };
+
+      recognition.onend = function() {
+        setTimeout(initKeywordListening, 1000);
       };
     }
 
