@@ -54,7 +54,6 @@
     <button class="icon-button" onclick="startTimer()">⏱</button>
     <button class="icon-button" onclick="pauseTimer()">⏸</button>
     <button class="icon-button" onclick="resetTimer()">🔄</button>
-    <button class="icon-button" onclick="startListening()">🎤</button>
   </div>
 
   <script>
@@ -133,7 +132,18 @@
         } else if (transcript.includes("초기화")) {
           resetTimer();
         } else {
-          speak("'시작', '일시정지', '재시작', '초기화' 중 하나를 말해주세요");
+          const hourMatch = transcript.match(/(\d+)시간/);
+          const minuteMatch = transcript.match(/(\d+)분/);
+          const secondMatch = transcript.match(/(\d+)초/);
+          if (hourMatch || minuteMatch || secondMatch) {
+            document.getElementById('hours').value = hourMatch ? parseInt(hourMatch[1]) : 0;
+            document.getElementById('minutes').value = minuteMatch ? parseInt(minuteMatch[1]) : 0;
+            document.getElementById('seconds').value = secondMatch ? parseInt(secondMatch[1]) : 0;
+            updateDisplay();
+            speak("시간 설정 완료");
+          } else {
+            speak("'시작', '일시정지', '재시작', '초기화' 또는 시간 설정을 말해주세요");
+          }
         }
       };
 
@@ -145,6 +155,12 @@
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('service-worker.js')
         .then(() => console.log("Service Worker Registered"));
+    }
+
+    // 페이지 로드 시 자동으로 음성인식 시작
+    window.onload = function() {
+      speak("타이머 준비 완료. 음성으로 시작하세요");
+      startListening();
     }
   </script>
 </body>
