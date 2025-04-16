@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>음성 타이머</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.png">
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: #f0f0f0;
+    }
+    #timeDisplay {
+      font-size: 4rem;
+      margin: 20px;
+    }
+    input {
+      width: 60px;
+      font-size: 1.5rem;
+      text-align: center;
+      margin: 0 5px;
+    }
+    .button-row {
+      display: flex;
+      gap: 10px;
+      margin: 10px 0;
+    }
+    .icon-button {
+      font-size: 2rem;
+      padding: 10px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div>
+    <input type="number" id="hours" placeholder="시" min="0" max="23"> :
+    <input type="number" id="minutes" placeholder="분" min="0" max="59"> :
+    <input type="number" id="seconds" placeholder="초" min="0" max="59">
+  </div>
+  <div id="timeDisplay">00:00:00</div>
+
+  <div class="button-row">
+    <button class="icon-button" onclick="startTimer()">⏱</button>
+    <button class="icon-button" onclick="pauseTimer()">⏸</button>
+    <button class="icon-button" onclick="resetTimer()">🔄</button>
+    <button class="icon-button" onclick="startListening()">🎤</button>
+  </div>
+
+  <script>
+    let countdown;
+    let timeLeft = 0;
+    let isPaused = false;
+
+    function updateDisplay() {
+      let h = Math.floor(timeLeft / 3600);
+      let m = Math.floor((timeLeft % 3600) / 60);
+      let s = timeLeft % 60;
+      document.getElementById("timeDisplay").textContent =
+        `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function speak(text) {
+      const msg = new SpeechSynthesisUtterance(text);
+      msg.lang = 'ko-KR';
+      window.speechSynthesis.speak(msg);
+    }
+
+    function startTimer() {
+      clearInterval(countdown);
+      timeLeft =
+        parseInt(document.getElementById('hours').value || 0) * 3600 +
+        parseInt(document.getElementById('minutes').value || 0) * 60 +
+        parseInt(document.getElementById('seconds').value || 0);
+
+      if (timeLeft <= 0) {
+        speak("시간을 설정해주세요");
+        return;
+      }
+
+      speak("타이머 시작");
+      updateDisplay();
+
+      countdown = setInterval(() => {
+        if (!isPaused && timeLeft > 0) {
+          timeLeft--;
+          updateDisplay();
+          if (timeLeft <= 5 && timeLeft > 0) speak(timeLeft.toString());
+        } else if (timeLeft === 0) {
+          clearInterval(countdown);
+          speak("타이머 종료");
+        }
+      }, 1000);
+    }
+
+    function pauseTimer() {
+      isPaused = !isPaused;
+      speak(isPaused ? "일시정지" : "재시작");
+    }
+
+    function resetTimer() {
+      clearInterval(countdown);
+      timeLeft = 0;
+      isPaused = false;
+      updateDisplay();
+      speak("초기화 완료");
+    }
+
+    function startListening() {
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = 'ko-KR';
+      recognition.start();
+
+      recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+
+        if (transcript.includes("시작")) {
+          startTimer();
+        } else if (transcript.includes("일시정지")) {
+          if (!isPaused) pauseTimer();
+        } else if (transcript.includes("재시작")) {
+          if (isPaused) pauseTimer();
+        } else if (transcript.includes("초기화")) {
+          resetTimer();
+        } else {
+          speak("'시작', '일시정지', '재시작', '초기화' 중 하나를 말해주세요");
+        }
+      };
+
+      recognition.onerror = function(event) {
+        alert('음성 인식 오류: ' + event.error);
+      };
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(() => console.log("Service Worker Registered"));
+    }
+  </script>
+</body>
+</html>
